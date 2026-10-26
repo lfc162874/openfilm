@@ -59,6 +59,24 @@ test("DeepSeek Harness is found inside its desktop app on a Mac, which carries t
   assert.equal(detectAgentInstallation('deepseek', { ...none, env: { PATH: bin } }).cli, join(bin, 'dsh'));
 });
 
+test("ZCode is found inside its desktop app on a Mac, which carries the command, and from the app the person chooses", () => {
+  if (process.platform === 'win32') return;
+  const home = mkdtempSync(join(tmpdir(), 'of-home-'));
+  const apps = join(home, 'Applications');
+  const none = { home, env: { PATH: '' }, pathDirs: [], applicationDirs: [apps] };
+  assert.equal(detectAgentInstallation('zcode', none).cli, null);
+  const zcode = join(apps, 'ZCode.app', 'Contents', 'Resources', 'glm', 'zcode.cjs');
+  mkdirSync(join(zcode, '..'), { recursive: true });
+  writeFileSync(zcode, '#!/usr/bin/env node', { mode: 0o755 });
+  assert.equal(detectAgentInstallation('zcode', none).cli, zcode);
+  assert.equal(chosenProgram(join(apps, 'ZCode.app'), { names: ['zcode', 'zcode.cjs'], win: false }), zcode);
+  /* one on the PATH (npm's or Homebrew's zcode) comes first */
+  const bin = join(home, 'bin');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'zcode'), '', { mode: 0o755 });
+  assert.equal(detectAgentInstallation('zcode', { ...none, env: { PATH: bin } }).cli, join(bin, 'zcode'));
+});
+
 /** a file, its folders made */
 const put = (file, text = '', mode = 0o644) => { mkdirSync(join(file, '..'), { recursive: true }); writeFileSync(file, text, { mode }); return file; };
 

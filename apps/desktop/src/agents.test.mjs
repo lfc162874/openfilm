@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AgentSession, CLIENT_CAPABILITIES, agentDefaults, closeEverySession, planProblem, probeFolder, CODEX_UTF8_CMD, agentShell, allowOption, codexDeveloperInstructions, codexLaunchEnv, distinctOptions, errorCause, legacyOptions, optionsForModel, powerShellScript, powerShellLine, powerShellWindowLaunch, terminalScript, checkAgentProgram, readAgentStatus, setChosenPaths, signInScript, turnError, signInError, codexTooOld, AGENTS, ownSignIn, codexServiceError, codexRefusal, codexNotice, explainFailure, stderrReason, withToolKind, OWN_GROUP, stopTree, winArg } from './agents.mjs';
+import { adapterNodeArgs, AgentSession, CLIENT_CAPABILITIES, agentDefaults, closeEverySession, planProblem, probeFolder, CODEX_UTF8_CMD, agentShell, allowOption, codexDeveloperInstructions, codexLaunchEnv, distinctOptions, errorCause, legacyOptions, optionsForModel, powerShellScript, powerShellLine, powerShellWindowLaunch, terminalScript, checkAgentProgram, readAgentStatus, setChosenPaths, signInScript, turnError, signInError, codexTooOld, AGENTS, ownSignIn, codexServiceError, codexRefusal, codexNotice, explainFailure, stderrReason, withToolKind, OWN_GROUP, stopTree, winArg } from './agents.mjs';
 import { spawn } from 'node:child_process';
 import { acpSignedIn } from './agents.mjs';
 
@@ -639,4 +639,16 @@ test("a word for cmd.exe keeps its % as it is: no variable's value is put in its
   const words = ['50% of %PATH%', 'open "film"', '%USERNAME%'];
   const r = spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `"${[shim, ...words].map(winArg).join(' ')}"`], { encoding: 'utf8', windowsVerbatimArguments: true, windowsHide: true });
   assert.deepEqual(JSON.parse(r.stdout.trim()), words);
+});
+
+test('ZCode starts the ACP server when its adapter is run by its script path, on Node and Electron', async () => {
+  const { resolveInvocation } = await import('zcode-acp-server/dist/cli.js');
+  for (const electron of [false, true]) {
+    const args = adapterNodeArgs('zcode', '/adapter/dist/cli.js', electron);
+    const entry = args.indexOf('/adapter/dist/cli.js');
+    assert.ok(entry >= 0);
+    assert.deepEqual(resolveInvocation('cli.js', args.slice(entry + 1)), { kind: 'server' });
+    assert.deepEqual(adapterNodeArgs('codex', '/adapter.js', electron).slice(-1), ['/adapter.js']);
+    assert.deepEqual(adapterNodeArgs('byok', '/pi-agent.mjs', electron).slice(-1), ['/pi-agent.mjs']);
+  }
 });

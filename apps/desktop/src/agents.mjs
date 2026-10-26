@@ -1,13 +1,14 @@
 /**
  * The chat's agents: the person's own Claude Code, Codex, GitHub Copilot, Cursor, OpenCode, CodeBuddy, Qwen Code,
- * Kimi, MiniMax Code or DeepSeek Harness, driven over the Agent Client Protocol (ACP): a child process speaking
+ * Kimi, MiniMax Code, DeepSeek Harness or ZCode, driven over the Agent Client Protocol (ACP): a child process speaking
  * JSON-RPC over stdin/stdout.
  * The app is the client: initialize, session/new (or session/resume for a conversation from before), session/prompt;
  * session/update draws the chat, and session/request_permission asks the person in the chat.
  *
  * Claude Code and Codex speak it through their makers' official adapters (`@agentclientprotocol/claude-agent-acp`,
- * `@agentclientprotocol/codex-acp`, Apache-2.0), which the app carries; the others speak it themselves (`qwen --acp`,
- * `opencode acp`, …), as the ACP registry (agentclientprotocol.com/registry) starts them.
+ * `@agentclientprotocol/codex-acp`, Apache-2.0), which the app carries; ZCode through its bridge (`zcode-acp-server`,
+ * Apache-2.0), which the app carries too, on ZCode's own headless app-server; the others speak it themselves
+ * (`qwen --acp`, `opencode acp`, …), as the ACP registry (agentclientprotocol.com/registry) starts them.
  *
  * Why the person's own installation, never one bundled with the app:
  *   · size: each official program is 200–330 MB; the adapters are a few MB and take its path
@@ -97,6 +98,10 @@ export const AGENTS = Object.freeze({
       grep: 'search', glob: 'search',
       web_search: 'fetch', web_fetch: 'fetch',
     } },
+  /* ZCode speaks ACP through its bridge (`zcode-acp-server`, Apache-2.0), which starts ZCode's own headless
+     app-server (`zcode app-server --stdio`). It has no sign-in command: the person signs in to their GLM account in
+     ZCode itself (its credentials in ~/.zcode), so one found is connected */
+  zcode: { label: AGENT_DEFINITIONS.zcode.name, adapter: 'zcode-acp-server', adapterArgs: ['server'], env: (path) => ({ ZCODE_BIN: path }), login: null, approve: true },
 });
 
 /**
@@ -707,13 +712,18 @@ function adapterScript(pkg) {
   return join(dirname(manifest), bin ?? json.main ?? 'index.js');
 }
 
+/** Arguments shared by adapter probes, sessions and their diagnostic command lines. */
+export function adapterNodeArgs(id, script, electron = false) {
+  return [...(electron ? asNode(script) : [script]), ...(AGENTS[id]?.adapterArgs ?? [])];
+}
+
 /** How an agent's adapter starts: the app's Node running its script (on Electron, through as-node.mjs), told where the person's program is. */
 function adapterLaunch(id, cliPath) {
   const spec = AGENTS[id];
   const node = nodeRuntime();
   return {
     cmd: node.command,
-    args: node.env.ELECTRON_RUN_AS_NODE ? asNode(adapterScript(spec.adapter)) : [adapterScript(spec.adapter)],
+    args: adapterNodeArgs(id, adapterScript(spec.adapter), !!node.env.ELECTRON_RUN_AS_NODE),
     env: { ...node.env, ...spec.env(cliPath) },
   };
 }
@@ -1161,7 +1171,7 @@ export class AgentSession {
     const script = harness ? fileURLToPath(new URL('./pi-agent.mjs', import.meta.url)) : native ? null : adapterScript(this.spec.adapter);
     this.child = native
       ? spawn(native.cmd, native.args, { ...native.options, ...OWN_GROUP, cwd: this.opts.cwd, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
-      : spawn(node.command, node.env.ELECTRON_RUN_AS_NODE ? asNode(script) : [script], { ...OWN_GROUP, cwd: this.opts.cwd, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+      : spawn(node.command, adapterNodeArgs(this.opts.agent, script, !!node.env.ELECTRON_RUN_AS_NODE), { ...OWN_GROUP, cwd: this.opts.cwd, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     this.child.stderr.on('data', (d) => { this.stderr = (this.stderr + String(d)).slice(-16_000); });
     LIVE.add(this);
     this.child.once('exit', (code) => { LIVE.delete(this); this.exited = { code }; this.opts.onExit?.({ code, stderr: this.stderr }); });
@@ -1256,7 +1266,7 @@ export class AgentSession {
     this.opened = {
       program: harness ? 'pi' : cli.path,
       /* the command line the agent's process was started with: its own program, or the app's Node running its adapter (or Pi) */
-      command: native ? [native.cmd, ...native.args] : [node.command, ...(node.env.ELECTRON_RUN_AS_NODE ? asNode(script) : [script])],
+      command: native ? [native.cmd, ...native.args] : [node.command, ...adapterNodeArgs(this.opts.agent, script, !!node.env.ELECTRON_RUN_AS_NODE)],
       adapter: this.spec.adapter ?? null,
       env: Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, secret.has(k) || /KEY|TOKEN|SECRET|PASSWORD/i.test(k) ? '(hidden)' : k === 'OPENFILM_PI' ? JSON.parse(v) : v])),
       ...(env.CODEX_CONFIG ? { codexConfig: JSON.parse(env.CODEX_CONFIG) } : {}),

@@ -39,10 +39,18 @@ export const AGENT_PROGRAMS = Object.freeze({
   deepseek: { names: ['dsh'], dirs: (home, win, apps = ['/Applications', join(home, 'Applications')]) => (win
     ? [join(localAppData(home), 'Programs', 'DeepSeek Harness', 'resources', 'runtime', 'cli', 'bin')]
     : apps.map((dir) => dirname(join(dir, 'DeepSeek Harness.app', DSH_IN_APP)))) },
+  /* ZCode's desktop app carries the command (zcode.cjs, a script its bridge has Node run; it links none into the
+     PATH): inside ZCode.app on a Mac, in its install folder's resources on Windows */
+  zcode: { names: ['zcode', 'zcode.cjs'], dirs: (home, win, apps = ['/Applications', join(home, 'Applications')]) => (win
+    ? [join(localAppData(home), 'Programs', 'ZCode', 'resources', 'glm')]
+    : apps.map((dir) => dirname(join(dir, 'ZCode.app', ZCODE_IN_APP)))) },
 });
 
 /* where DeepSeek Harness is inside DeepSeek Harness.app, its desktop app (macOS) */
 const DSH_IN_APP = 'Contents/Resources/runtime/cli/bin/dsh';
+
+/* where ZCode is inside ZCode.app, its desktop app (macOS) */
+const ZCODE_IN_APP = 'Contents/Resources/glm/zcode.cjs';
 
 /** %LOCALAPPDATA% (Windows). */
 const localAppData = (home) => process.env.LOCALAPPDATA || join(home, 'AppData', 'Local');
@@ -407,7 +415,7 @@ export function chosenProgram(path, { names = [], win = windows } = {}) {
   let folder = false;
   try { folder = statSync(path).isDirectory(); } catch { /* a file, or not there */ }
   if (folder) {
-    const inApp = /\.app$/i.test(path) ? [...CODEX_IN_APP, OPENCODE_IN_APP, DSH_IN_APP, ...names.map((n) => `Contents/MacOS/${n}`)].map((p) => join(path, p)).find(executableFile) : null;
+    const inApp = /\.app$/i.test(path) ? [...CODEX_IN_APP, OPENCODE_IN_APP, DSH_IN_APP, ZCODE_IN_APP, ...names.map((n) => `Contents/MacOS/${n}`)].map((p) => join(path, p)).find(executableFile) : null;
     return inApp ?? names.map((n) => findExecutable(n, [path, join(path, 'bin')], { PATH: '' }, { win })).find(Boolean) ?? null;
   }
   if (win) {

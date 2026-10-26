@@ -1,10 +1,10 @@
 /**
  * The agents the chat can use, as Settings → Agents shows them, and the person's choices about them:
  *
- *   · codex, claude, copilot, cursor, opencode, codebuddy, qwen, kimi, minimax, deepseek — the person's own agents
- *     (agents.mjs): Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, CodeBuddy, Qwen Code, Kimi, MiniMax Code and
- *     DeepSeek Harness. Each uses the account signed in on the computer as it is: connecting opens Terminal for its own
- *     sign-in command only when it is signed out (never Codex's or DeepSeek Harness's: each is signed in in its own
+ *   · codex, claude, copilot, cursor, opencode, codebuddy, qwen, kimi, minimax, deepseek, zcode — the person's own agents
+ *     (agents.mjs): Codex, Claude Code, GitHub Copilot, Cursor, OpenCode, CodeBuddy, Qwen Code, Kimi, MiniMax Code,
+ *     DeepSeek Harness and ZCode. Each uses the account signed in on the computer as it is: connecting opens Terminal for its own
+ *     sign-in command only when it is signed out (never Codex's, DeepSeek Harness's or ZCode's: each is signed in in its own
  *     app, so one found is connected), disconnecting only stops OpenFilm using it, and connecting again uses whichever
  *     account is signed in then (one switched in the agent or its maker's app). `account` says whose it is. Codex and
  *     Claude Code are shown in the chat's menu from the start; the others once the person connects one or switches it

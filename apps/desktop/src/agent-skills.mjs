@@ -18,7 +18,7 @@
  *   Copilot       OpenFilm's through COPILOT_SKILLS_DIRS and `--disable-mcp-server` for the person's own servers; it
  *                 has no way to hide a skill, so it keeps all of the person's.
  *   Pi            OpenFilm's only.
- * CodeBuddy, Cursor, Kimi, MiniMax Code and DeepSeek Harness are not told anything: they have the person's skills and
+ * CodeBuddy, Cursor, Kimi, MiniMax Code, DeepSeek Harness and ZCode are not told anything: they have the person's skills and
  * servers as in their own terminal, and OpenFilm's skills when named in a message. A system-defaults file the person
  * set themselves is left as it is.
  *
